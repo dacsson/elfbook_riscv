@@ -1,4 +1,5 @@
-import { formatDisasm, formatHexDump, formatReadelfOutput } from "./formatter.js";
+import { formatDisasm, formatHexDump, formatReadelfOutput } from "./lib/formatter.js";
+import { VirtualScrollManager } from "./lib/virtualScroll.js";
 
 // import { invoke, Channel } from '@tauri-apps/api/core';
 const { invoke, Channel } = window.__TAURI__.core;
@@ -6,15 +7,6 @@ const { listen } = window.__TAURI__.event;
 
 const DISASSEMBLE_EVENT = 'disassembled'
 const onDasmEvent = new Channel()
-// onDasmEvent.onmessage = (message) => {
-//   try {
-//     const disasmContainer = document.getElementById('disasmContent');
-//     disasmContainer.insertAdjacentHTML('beforeend', formatDisasm(message));
-//   } catch (e) {
-//     console.log("Error chunk: ", e)
-//   }
-// }
-
 const HEXDUMP_EVENT = 'hexdumped'
 const onHexdEvent = new Channel()
 
@@ -52,32 +44,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const hexContainer = document.getElementById('hexContainer');
     let query = ""
 
-    // Virtual scrolling variables
-    let allLines = [];
-    let lineHeight = 25;
-    let viewportHeight = 0;
-    let scrollTop = 0;
-    let totalHeight = 0;
-    let startIdx = 0;
-    let endIdx = 0;
-    let isScrolling = false;
-    let isInitialized = false;
+    // Virtual scrolling managers
+    let disasmScrollManager = null;
+    let hexScrollManager = null;
 
-    // Create spacer element for proper scroll height
-    let spacerElement = null;
-
-    // Virtual scrolling variables for hex dump
-    let hexLines = [];
-    let hexLineHeight = 25;
-    let hexViewportHeight = 0;
-    let hexScrollTop = 0;
-    let hexTotalHeight = 0;
-    let hexStartIdx = 0;
-    let hexEndIdx = 0;
-    let hexIsScrolling = false;
-    let hexIsInitialized = false;
-    let hexSpacerElement = null;
-
+    // Initialize virtual scroll managers
+    disasmScrollManager = new VirtualScrollManager(disasmContent, 25);
+    hexScrollManager = new VirtualScrollManager(hexContainer, 25);
     onDasmEvent.onmessage = (message) => {
         try {
             // Store all lines for virtual scrolling
@@ -85,19 +58,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const formattedLines = lines.map(line => formatDisasm(line));
 
             // Append new lines
-            allLines = allLines.concat(formattedLines);
-
-            // Reinitialize virtual scrolling if first batch
-            if (!isInitialized && allLines.length === formattedLines.length) {
-                initVirtualScroll();
-                isInitialized = true;
-                disasmContent.addEventListener('scroll', handleScroll);
+            if (!disasmScrollManager.isInitialized) {
+                disasmScrollManager.setLines(formattedLines);
+                disasmScrollManager.isInitialized = true;
+                disasmContent.addEventListener('scroll', () => disasmScrollManager.handleScroll());
             } else {
-                // Update total height for subsequent batches
-        totalHeight = allLines.length * lineHeight;
-        updateSpacerHeight();
-        updateVisibleRange();
-    }
+                disasmScrollManager.addLines(formattedLines);
+            }
         } catch (e) {
             console.log("Error chunk: ", e)
         }
@@ -106,79 +73,24 @@ document.addEventListener('DOMContentLoaded', () => {
     onHexdEvent.onmessage = (message) => {
         try {
             // For hex dump, we'll also use virtual scrolling for consistency
-            const hexContainer = document.getElementById('hexContainer');
-
-            // Parse hex dump lines and store them for virtual scrolling
             const lines = message.split('\n').filter(line => line.trim() !== '');
-            const formattedLines = lines.map(line => {
-                const parts = line.trim().split(/\s+/);
-                if (parts.length < 2) return '';
-                const addr = parts[0];
-                const bytes = parts.slice(1).join(' ');
-                return `
-        <div class="line">
-          <span class="line-numbers">${addr}</span>
-          <span class="code-content">${bytes}</span>
-        </div>
-      `;
-            }).filter(html => html.trim() !== '');
-
+            const formattedLines = lines.map(line => formatHexDump(line)).filter(html => html.trim() !== '');
             // Append to hex lines array for virtual scrolling
-            hexLines = hexLines.concat(formattedLines);
-
-            // Update hex container height and trigger virtual scroll
-            if (hexLines.length === formattedLines.length) {
-                initHexVirtualScroll();
+            if (!hexScrollManager.isInitialized) {
+                hexScrollManager.setLines(formattedLines);
+                hexScrollManager.isInitialized = true;
+                hexContainer.addEventListener('scroll', () => hexScrollManager.handleScroll());
             } else {
-                // Update total height for subsequent batches
-        hexTotalHeight = hexLines.length * hexLineHeight;
-        hexSpacerElement.style.height = `${hexTotalHeight}px`;
-        updateHexVisibleRange();
-    }
+                hexScrollManager.addLines(formattedLines);
+            }
         } catch (e) {
             console.log("Error chunk: ", e)
         }
     }
 
-    // Initialize virtual scrolling with proper spacer
-    function initVirtualScroll() {
-            viewportHeight = disasmContent.clientHeight;
-        totalHeight = allLines.length * lineHeight;
-
-        // Create or reset spacer element
-        if (!spacerElement) {
-            spacerElement = document.createElement('div');
-            spacerElement.className = 'virtual-scroll-spacer';
-            disasmContent.appendChild(spacerElement);
-        }
-
-        updateSpacerHeight();
-        disasmContent.style.overflowY = 'auto';
-        disasmContent.style.position = 'relative';
-        updateVisibleRange();
-        }
-
-    // Update the spacer height to match total content height
-    function updateSpacerHeight() {
-        if (spacerElement) {
-            spacerElement.style.height = `${totalHeight}px`;
-        }
-    }
-
-    // Update visible range based on scroll position
-    function updateVisibleRange() {
-        if (allLines.length === 0) return;
-
-        startIdx = Math.max(0, Math.floor(scrollTop / lineHeight) - 10);
-        endIdx = Math.min(allLines.length, startIdx + Math.ceil(viewportHeight / lineHeight) + 20);
-
-        renderVisibleLines();
-    }
-
-    // Render only visible lines
-    function renderVisibleLines() {
-        if (allLines.length === 0) return;
-
+    // Render functions for virtual scrolling
+    function renderDisasmLines(startIdx, endIdx) {
+        if (disasmScrollManager.lines.length === 0) return;
         const container = disasmContent;
         const fragment = document.createDocumentFragment();
 
@@ -188,20 +100,20 @@ document.addEventListener('DOMContentLoaded', () => {
             if (child.classList && child.classList.contains('line')) {
                 child.remove();
             }
-    });
+        });
 
         // Create visible lines
         for (let i = startIdx; i < endIdx; i++) {
-            const lineHtml = allLines[i];
+            const lineHtml = disasmScrollManager.lines[i];
             if (lineHtml) {
                 const element = document.createElement('div');
                 element.className = 'line';
                 element.dataset.index = i;
                 element.innerHTML = lineHtml;
                 element.style.position = 'absolute';
-                element.style.top = `${i * lineHeight}px`;
+                element.style.top = `${i * 25}px`;
                 element.style.width = '100%';
-                element.style.height = `${lineHeight}px`;
+                element.style.height = '25px';
                 element.style.boxSizing = 'border-box';
                 fragment.appendChild(element);
             }
@@ -210,50 +122,8 @@ document.addEventListener('DOMContentLoaded', () => {
         container.appendChild(fragment);
     }
 
-    // Handle scroll events with debouncing
-    function handleScroll() {
-        if (isScrolling) return;
-        isScrolling = true;
-
-        scrollTop = disasmContent.scrollTop;
-        requestAnimationFrame(() => {
-            updateVisibleRange();
-            isScrolling = false;
-});
-    }
-
-    // Initialize hex virtual scrolling
-    function initHexVirtualScroll() {
-        hexViewportHeight = hexContainer.clientHeight;
-        hexTotalHeight = hexLines.length * hexLineHeight;
-
-        // Create or reset spacer element
-        if (!hexSpacerElement) {
-            hexSpacerElement = document.createElement('div');
-            hexSpacerElement.className = 'virtual-scroll-spacer';
-            hexContainer.appendChild(hexSpacerElement);
-        }
-
-        hexSpacerElement.style.height = `${hexTotalHeight}px`;
-        hexContainer.style.overflowY = 'auto';
-        hexContainer.style.position = 'relative';
-        updateHexVisibleRange();
-    }
-
-    // Update hex visible range based on scroll position
-    function updateHexVisibleRange() {
-        if (hexLines.length === 0) return;
-
-        hexStartIdx = Math.max(0, Math.floor(hexScrollTop / hexLineHeight) - 10);
-        hexEndIdx = Math.min(hexLines.length, hexStartIdx + Math.ceil(hexViewportHeight / hexLineHeight) + 20);
-
-        renderHexVisibleLines();
-    }
-
-    // Render only visible hex lines
-    function renderHexVisibleLines() {
-        if (hexLines.length === 0) return;
-
+    function renderHexLines(startIdx, endIdx) {
+        if (hexScrollManager.lines.length === 0) return;
         const container = hexContainer;
         const fragment = document.createDocumentFragment();
 
@@ -266,17 +136,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Create visible lines
-        for (let i = hexStartIdx; i < hexEndIdx; i++) {
-            const lineHtml = hexLines[i];
+        for (let i = startIdx; i < endIdx; i++) {
+            const lineHtml = hexScrollManager.lines[i];
             if (lineHtml) {
                 const element = document.createElement('div');
                 element.className = 'line';
                 element.dataset.index = i;
                 element.innerHTML = lineHtml;
                 element.style.position = 'absolute';
-                element.style.top = `${i * hexLineHeight}px`;
+                element.style.top = `${i * 25}px`;
                 element.style.width = '100%';
-                element.style.height = `${hexLineHeight}px`;
+                element.style.height = '25px';
                 element.style.boxSizing = 'border-box';
                 fragment.appendChild(element);
             }
@@ -285,18 +155,9 @@ document.addEventListener('DOMContentLoaded', () => {
         container.appendChild(fragment);
     }
 
-    // Handle hex scroll events with debouncing
-    function handleHexScroll() {
-        if (hexIsScrolling) return;
-        hexIsScrolling = true;
-
-        hexScrollTop = hexContainer.scrollTop;
-        requestAnimationFrame(() => {
-            updateHexVisibleRange();
-            hexIsScrolling = false;
-        });
-    }
-
+    // Initialize virtual scrolling with proper spacer
+    disasmScrollManager.init(renderDisasmLines);
+    hexScrollManager.init(renderHexLines);
     fileBtn.addEventListener('click', async () => {
         const result = await window.__TAURI__.dialog.open({
             multiple: false,
@@ -306,15 +167,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         if (result) {
             // Reset state
-            allLines = [];
-            startIdx = 0;
-            endIdx = 0;
-            scrollTop = 0;
-            hexLines = [];
-            hexStartIdx = 0;
-            hexEndIdx = 0;
-            hexScrollTop = 0;
-
+            disasmScrollManager.reset();
+            hexScrollManager.reset();
             const promises = [
                 invoke("disassemble_file", { filePath: result, onEvent: onDasmEvent }),
                 invoke("hexdump_file", { filePath: result, onEvent: onHexdEvent }),
@@ -343,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
         searchResults = [];
 
         // Search through all stored lines
-        allLines.forEach((lineHtml, index) => {
+        disasmScrollManager.lines.forEach((lineHtml, index) => {
             // Extract text content from the HTML to search
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = lineHtml;
@@ -384,7 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const resultIndex = searchResults[currentIndex].index;
 
         // Scroll to the line in the virtual scroll container
-        const targetTop = resultIndex * lineHeight;
+        const targetTop = resultIndex * 25;
 
         // Scroll to the position
         disasmContent.scrollTo({
@@ -426,16 +280,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.addEventListener('resize', () => {
-        if (allLines.length > 0 && isInitialized) {
-            viewportHeight = disasmContent.clientHeight;
-            updateVisibleRange();
+        if (disasmScrollManager.lines.length > 0 && disasmScrollManager.isInitialized) {
+            disasmScrollManager.viewportHeight = disasmContent.clientHeight;
+            disasmScrollManager.updateVisibleRange();
         }
-        if (hexLines.length > 0 && hexIsInitialized) {
-            hexViewportHeight = hexContainer.clientHeight;
-            updateHexVisibleRange();
+        if (hexScrollManager.lines.length > 0 && hexScrollManager.isInitialized) {
+            hexScrollManager.viewportHeight = hexContainer.clientHeight;
+            hexScrollManager.updateVisibleRange();
         }
     });
 
     // Add scroll listener for hex container
-    hexContainer.addEventListener('scroll', handleHexScroll);
+    hexContainer.addEventListener('scroll', () => hexScrollManager.handleScroll());
 });

@@ -38,7 +38,7 @@ export function formatDisasm(disasmText) {
             // Skip empty lines
             if (!trimmed) return '';
 
-            // Fallback: render as plain text
+            // Fallback
             return `
         <div class="line">
           <span class="line-numbers"></span>
@@ -75,7 +75,6 @@ export function formatReadelfOutput(rawOutput) {
     let currentSection = '';
 
     lines.forEach(line => {
-        // Skip empty lines
         if (!line.trim()) return;
 
         // Detect section headers (e.g., "Program Headers", "Section Headers")
