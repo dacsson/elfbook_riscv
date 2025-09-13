@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tauri App</title>
+    <script type="module" src="/main.js" defer></script>
+  </head>
+
+  <body>
+    <main class="container">
+      <div class="editor-layout">
+        <!-- Left: Hex Dump -->
+        <div class="sidebar left-sidebar">
+          <div class="sidebar-header">
+            <span>Hex dump</span>
+          </div>
+          <div class="sidebar-content">
+            <div id="hexContainer" class="code-container">
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Disassembled Dump -->
+        <div class="sidebar right-sidebar">
+          <div class="sidebar-header">
+            <span>Disassembled dump</span>
+            <div class="btn-group">
+              <button class="btn file-btn" id="fileBtn">📤</button>
+            </div>
+          </div>
+
+          <!-- Search Bar -->
+          <div class="search-bar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8" />
+              <path d="M21 21l-4.35-4.35" />
+            </svg>
+            <input type="text" id="searchInput" placeholder="Search..." />
+            <button id="search-accept">🔍</button>
+            <button id="search-clear">x</button>
+            <button id="prevBtn">◀</button>
+            <button id="nextBtn">▶</button>
+          </div>
+
+          <!-- Tabs -->
+          <div class="tabs">
+            <div class="tab active" data-tab="disasm">Disassembled</div>
+            <div class="tab" data-tab="readelf">Readelf</div>
+          </div>
+
+          <!-- Disassembled Content -->
+          <div id="disasmContent" class="code-container">
+
+          </div>
+
+          <!-- Readelf Content -->
+          <div id="readelfContent" class="readelf-content" style="display: none;">
+          </div>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

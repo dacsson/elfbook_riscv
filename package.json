@@ -1,0 +1,19 @@
+{
+  "name": "kv2rs",
+  "version": "0.2.0",
+  "description": "",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "dev": "cd packages && tauri dev",
+    "build": "cd packages && tauri build",
+    "dev:renderer": "cd packages/src-renderer && bun dev",
+    "build:renderer": "cd packages/src-renderer && bun build",
+    "lint": "cd packages/src-renderer && bun lint",
+    "icons": "cd packages && tauri icon src-tauri/app-icon.png",
+    "tauri": "cd packages && tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.8.0"
+  }
+}
