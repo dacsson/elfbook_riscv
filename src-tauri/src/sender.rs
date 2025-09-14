@@ -49,10 +49,11 @@ impl Packet<String> {
     /// Send string data to frontend
     ///
     /// Emits an [AppHandle] event
-    pub fn send(&self, channel: Channel<String>) {
+    pub fn send(&self, app_handle: &AppHandle) {
         match &self.strategy {
             SendStrategy::General => {
-                let _ = channel.send(self.data.to_string());
+                // let _ = channel.send(self.data.to_string());
+                let _ = app_handle.emit(&self.event.value(), &self.data);
             }
             SendStrategy::ByChunks => {
                 println!("{} {}", self.event.value(), self.data.lines().count());
@@ -60,7 +61,8 @@ impl Packet<String> {
                 let lines: Vec<&str> = self.data.lines().collect();
                 for chunk in lines.chunks(chunk_size) {
                     let chunk_str = chunk.join("\n");
-                    let _ = channel.send(chunk_str);
+                    // let _ = channel.send(chunk_str);
+                    let _ = app_handle.emit(&self.event.value(), chunk_str);
                 }
                 println!("sender end");
             }

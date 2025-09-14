@@ -9,7 +9,7 @@ use serde_json::{json, Value};
 use tauri::ipc::Channel;
 
 #[tauri::command]
-fn disassemble_file(app: AppHandle, file_path: &str, on_event: Channel<String>) {
+fn disassemble_file(app: AppHandle, file_path: &str) {
     let objdump = Command::new("llvm-objdump-21")
         .args(&["-D", "--mattr=+d,+f,+z,+v", &file_path])
         .output()
@@ -22,19 +22,19 @@ fn disassemble_file(app: AppHandle, file_path: &str, on_event: Channel<String>) 
             disasm,
             sender::SendStrategy::ByChunks
         );
-        packet.send(on_event);
+        packet.send(&app);
     } else {
         let epacket = sender::Packet::new(
             sender::Event::Error,
             objdump.unwrap_err(),
             sender::SendStrategy::General
         );
-        epacket.send(on_event);
+        epacket.send(&app);
     }
 }
 
 #[tauri::command]
-fn hexdump_file(app: AppHandle, file_path: &str, on_event: Channel<String>) {
+fn hexdump_file(app: AppHandle, file_path: &str) {
     let xxd = Command::new("xxd")
         .arg("-c16") // 16 bytes per line
         .arg(&file_path)
@@ -48,12 +48,12 @@ fn hexdump_file(app: AppHandle, file_path: &str, on_event: Channel<String>) {
             hex_dump,
             sender::SendStrategy::ByChunks
         );
-        packet.send(on_event);
+        packet.send(&app);
     }
 }
 
 #[tauri::command]
-fn readelf_file(app: AppHandle, file_path: &str, on_event: Channel<String>) {
+fn readelf_file(app: AppHandle, file_path: &str) {
     let readelf = Command::new("readelf")
         .args(&["-a", &file_path])
         .output()
@@ -66,7 +66,7 @@ fn readelf_file(app: AppHandle, file_path: &str, on_event: Channel<String>) {
             readelf_dump,
             sender::SendStrategy::ByChunks
         );
-        packet.send(on_event);
+        packet.send(&app);
     }
 }
 

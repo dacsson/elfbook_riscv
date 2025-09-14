@@ -29,7 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let receiver = new Receiver();
 
     // Init events
-    receiver.initEvents(disasmScrollManager, disasmContent, hexScrollManager, hexContainer);
+    // receiver.initEvents(disasmScrollManager, disasmContent, hexScrollManager, hexContainer);
+    receiver.initListeners(disasmScrollManager, disasmContent, hexScrollManager, hexContainer);
 
     fileBtn.addEventListener('click', async () => {
         const result = await window.__TAURI__.dialog.open({
@@ -39,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ]
         });
         if (result) {
-            await receiver.tieChannelsToEvents(result, disasmScrollManager, hexScrollManager)
+            await receiver.launchFile(result, disasmScrollManager, hexScrollManager)
         }
     });
 
@@ -70,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const tabId = tab.getAttribute('data-tab');
             disasmContent.style.display = tabId === 'disasm' ? 'block' : 'none';
             readelfContent.style.display = tabId === 'readelf' ? 'block' : 'none';
-            hexContainer.style.display = tabId === 'hexdump' ? 'block' : 'none';
+            // hexContainer.style.display = tabId === 'hexdump' ? 'block' : 'none';
         });
     });
 
