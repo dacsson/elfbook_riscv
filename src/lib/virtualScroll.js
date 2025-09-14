@@ -1,5 +1,3 @@
-// src/virtualScroll.js
-
 export class VirtualScrollManager {
     constructor(container, lineHeight = 25) {
         this.container = container;
@@ -13,11 +11,9 @@ export class VirtualScrollManager {
         this.isInitialized = false;
         this.spacerElement = null;
         this.lines = [];
-        this.renderCallback = null;
     }
 
-    init(renderCallback) {
-        this.renderCallback = renderCallback;
+    init() {
         this.viewportHeight = this.container.clientHeight;
         this.totalHeight = this.lines.length * this.lineHeight;
 
@@ -45,9 +41,8 @@ export class VirtualScrollManager {
         this.startIdx = Math.max(0, Math.floor(this.scrollTop / this.lineHeight) - 10);
         this.endIdx = Math.min(this.lines.length, this.startIdx + Math.ceil(this.viewportHeight / this.lineHeight) + 20);
 
-        if (this.renderCallback) {
-            this.renderCallback(this.startIdx, this.endIdx);
-        }
+
+        this.render(this.startIdx, this.endIdx);
     }
 
     handleScroll() {
@@ -89,4 +84,37 @@ export class VirtualScrollManager {
             this.spacerElement.style.height = '0px';
         }
     }
+
+    render() {
+        if (this.lines.length === 0) return;
+        const fragment = document.createDocumentFragment();
+
+        // Remove existing line elements (keep spacer)
+        const children = Array.from(this.container.children);
+        children.forEach(child => {
+            if (child.classList && child.classList.contains('line')) {
+                child.remove();
+            }
+        });
+
+        // Create visible lines
+        for (let i = this.startIdx; i < this.endIdx; i++) {
+            const lineHtml = this.lines[i];
+            if (lineHtml) {
+                const element = document.createElement('div');
+                element.className = 'line';
+                element.dataset.index = i;
+                element.innerHTML = lineHtml;
+                element.style.position = 'absolute';
+                element.style.top = `${i * 25}px`;
+                element.style.width = '100%';
+                element.style.height = '25px';
+                element.style.boxSizing = 'border-box';
+                fragment.appendChild(element);
+            }
+        }
+
+        this.container.appendChild(fragment);
+    }
+
 }
