@@ -1,4 +1,4 @@
-import {formatDisasm, formatHexDump, formatReadelfOutput} from "./formatter.js";
+import {formatDisasm, formatHexDump, formatReadelfOutput, formatSpec} from "./formatter.js";
 
 const {invoke, Channel} = window.__TAURI__.core;
 const {listen} = window.__TAURI__.event;
@@ -7,6 +7,7 @@ const DISASM_EVENT = "disassembled"
 const HEXDUMP_EVENT = "hexdumped"
 const ELFINFO_EVENT = "elfinfodumped"
 const ERROR_EVENT = "backend_error"
+const SPECRESULT_EVENT = "specresult"
 
 // An opponent of backend's `Sender`
 // receives events from backend
@@ -130,6 +131,16 @@ export class Receiver {
                 alert('Error: ' + message.payload);
             } catch (e) {
                 console.log("Error to aler (?!): ", e)
+            }
+        })
+
+        listen(SPECRESULT_EVENT, (message) => {
+            try {
+                const specContainer = document.getElementById('specContainer');
+                const searchQuery = document.getElementById('searchInput').value;
+                specContainer.innerHTML += formatSpec(message.payload, searchQuery);
+            } catch (e) {
+                console.log("Error special result: ", e)
             }
         })
     }

@@ -10,6 +10,7 @@ pub enum Event {
     Disassembled, // result of llvm-objdump
     HexDumped, // result of xxd
     ElfInfoDumped, // result of readelf
+    SpecResult, // result of RISC-V spec finder
     Error
 }
 
@@ -19,6 +20,7 @@ impl Event {
             Event::Disassembled => "disassembled".to_string(),
             Event::HexDumped => "hexdumped".to_string(),
             Event::ElfInfoDumped => "elfinfodumped".to_string(),
+            Event::SpecResult => "specresult".to_string(),
             Event::Error => "backend_error".to_string(),
         }
     }

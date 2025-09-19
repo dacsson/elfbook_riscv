@@ -730,3 +730,11 @@ body, html {
 .left-sidebar .code-content {
   width: calc(100% - 80px);
 }
+
+hr {
+  border: none; /* Removes the default border */
+  border-top: 1px solid #ccc; /* Creates a 1px solid gray line */
+  width: 80%; /* Sets the width of the line */
+  margin: 20px auto; /* Centers the line horizontally and adds vertical spacing */
+  background-color: transparent; /* Ensures no background fill if border is removed */
+}

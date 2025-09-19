@@ -2,6 +2,8 @@ import {VirtualScrollManager} from "./lib/virtualScroll.js";
 import {SearchManager} from "./lib/search.js";
 import {Receiver} from "./lib/receiver.js";
 
+const {invoke} = window.__TAURI__.core;
+
 document.addEventListener('DOMContentLoaded', () => {
     const fileBtn = document.getElementById('fileBtn');
     const searchInput = document.getElementById('searchInput');
@@ -9,10 +11,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchClear = document.getElementById('search-clear')
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
-    const tabs = document.querySelectorAll('.tab');
+    const rightTabs = document.querySelectorAll('.sidebar.right-sidebar .tab');
+    const leftTabs = document.querySelectorAll('.sidebar.left-sidebar .tab');
     const disasmContent = document.getElementById('disasmContent');
     const readelfContent = document.getElementById('readelfContent');
     const hexContainer = document.getElementById('hexContainer');
+    const specContent = document.getElementById('specContainer')
 
     // Virtual scrolling managers
     let disasmScrollManager = new VirtualScrollManager(disasmContent, 25);
@@ -48,12 +52,16 @@ document.addEventListener('DOMContentLoaded', () => {
         searchManager.onInput(searchInput)
     });
 
-    searchAccept.addEventListener('click', () => {
+    searchAccept.addEventListener('click', async () => {
         searchManager.onAcceptClick(disasmScrollManager)
+        invoke("read_spec", {query: searchInput.value})
     })
 
     searchClear.addEventListener('click', () => {
         searchManager.onQueryClear();
+        searchInput.value = '';
+        const specContainer = document.getElementById('specContainer');
+        specContainer.innerHTML = '';
     })
 
     prevBtn.addEventListener('click', () => {
@@ -64,9 +72,9 @@ document.addEventListener('DOMContentLoaded', () => {
         searchManager.next();
     });
 
-    tabs.forEach(tab => {
+    rightTabs.forEach(tab => {
         tab.addEventListener('click', () => {
-            tabs.forEach(t => t.classList.remove('active'));
+            rightTabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
             const tabId = tab.getAttribute('data-tab');
             disasmContent.style.display = tabId === 'disasm' ? 'block' : 'none';
@@ -74,6 +82,16 @@ document.addEventListener('DOMContentLoaded', () => {
             // hexContainer.style.display = tabId === 'hexdump' ? 'block' : 'none';
         });
     });
+
+    leftTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            leftTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const tabId = tab.getAttribute('data-tab');
+            hexContainer.style.display = tabId === 'hex' ? 'block' : 'none';
+            specContent.style.display = tabId === 'spec' ? 'block' : 'none';
+        });
+    })
 
     window.addEventListener('resize', () => {
         if (disasmScrollManager.lines.length > 0 && disasmScrollManager.isInitialized) {

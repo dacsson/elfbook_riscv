@@ -119,3 +119,28 @@ export function formatReadelfOutput(rawOutput) {
 
     return result;
 }
+
+/// Format SPEC responce (pages with query)
+export function formatSpec(response, query) {
+    const lines = response.trim().split('\n');
+    let res = '';
+    lines.forEach(line => {
+        let pageNumMatch = line.match(/^\w(\d+)$/);
+
+        // Highlight query found in text
+        if (query && line.includes(query)) {
+            line = line.replace(new RegExp(`(${query})`, 'gi'), '<mark>$1</mark>');
+        }
+
+        if (pageNumMatch) {
+            res += `<hr>`
+        }
+        else {
+            res += `<p>${line}</p>`;
+        }
+    });
+    let result = '<pre>';
+    result += res;
+    result += '</pre>';
+    return result;
+}

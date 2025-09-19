@@ -1,12 +1,14 @@
 mod sender;
+mod spec_parser;
+mod state;
 
-use tauri_plugin_dialog::DialogExt;
+use std::sync::Mutex;
+use std::error::Error;
+use tauri_plugin_dialog::{DialogExt, FilePath};
 use tauri::{AppHandle, Emitter, Manager, State, Window};
 use std::process::Command;
 use std::io::Write;
-use tauri_plugin_dialog::FileDialogBuilder;
-use serde_json::{json, Value};
-use tauri::ipc::Channel;
+use crate::state::{AppMutex, AppState};
 
 #[tauri::command]
 fn disassemble_file(app: AppHandle, file_path: &str) {
@@ -70,15 +72,34 @@ fn readelf_file(app: AppHandle, file_path: &str) {
     }
 }
 
+#[tauri::command]
+fn read_spec(app: AppHandle, query: String) {
+    tauri::async_runtime::spawn(async move {
+        let text = spec_parser::find_in_doc("/home/safonoff/Documents/riscv_spec.txt", &query);
+
+        let packet = sender::Packet::new(
+            sender::Event::SpecResult,
+            String::from(text.unwrap().join("\n")),
+            sender::SendStrategy::ByChunks
+        );
+        packet.send(&app);
+    });
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .setup(|app| {
+            app.manage(AppMutex(Mutex::new(AppState::new())));
+            Ok(())
+        })
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             disassemble_file,
             hexdump_file,
-            readelf_file
+            readelf_file,
+            read_spec
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
