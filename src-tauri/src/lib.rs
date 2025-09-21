@@ -2,13 +2,10 @@ mod sender;
 mod spec_parser;
 mod state;
 
-use std::sync::Mutex;
-use std::error::Error;
-use tauri_plugin_dialog::{DialogExt, FilePath};
-use tauri::{AppHandle, Emitter, Manager, State, Window};
-use std::process::Command;
-use std::io::Write;
 use crate::state::{AppMutex, AppState};
+use std::process::Command;
+use std::sync::Mutex;
+use tauri::{AppHandle, Manager};
 
 #[tauri::command]
 fn disassemble_file(app: AppHandle, file_path: &str) {
@@ -22,14 +19,14 @@ fn disassemble_file(app: AppHandle, file_path: &str) {
         let packet = sender::Packet::new(
             sender::Event::Disassembled,
             disasm,
-            sender::SendStrategy::ByChunks
+            sender::SendStrategy::ByChunks,
         );
         packet.send(&app);
     } else {
         let epacket = sender::Packet::new(
             sender::Event::Error,
             objdump.unwrap_err(),
-            sender::SendStrategy::General
+            sender::SendStrategy::General,
         );
         epacket.send(&app);
     }
@@ -48,7 +45,7 @@ fn hexdump_file(app: AppHandle, file_path: &str) {
         let packet = sender::Packet::new(
             sender::Event::HexDumped,
             hex_dump,
-            sender::SendStrategy::ByChunks
+            sender::SendStrategy::ByChunks,
         );
         packet.send(&app);
     }
@@ -66,7 +63,7 @@ fn readelf_file(app: AppHandle, file_path: &str) {
         let packet = sender::Packet::new(
             sender::Event::ElfInfoDumped,
             readelf_dump,
-            sender::SendStrategy::ByChunks
+            sender::SendStrategy::ByChunks,
         );
         packet.send(&app);
     }
@@ -75,12 +72,16 @@ fn readelf_file(app: AppHandle, file_path: &str) {
 #[tauri::command]
 fn read_spec(app: AppHandle, query: String) {
     tauri::async_runtime::spawn(async move {
-        let text = spec_parser::find_in_doc("/home/safonoff/Documents/riscv_spec.txt", &query);
+        let text = spec_parser::find_in_html(
+            "/home/safonoff/Work/riscv-isa-manual/build/riscv-unprivileged.html",
+            &query,
+        );
+        // spec_parser::find_in_doc("/home/safonoff/Documents/riscv_spec.txt", &query);
 
         let packet = sender::Packet::new(
             sender::Event::SpecResult,
             String::from(text.unwrap().join("\n")),
-            sender::SendStrategy::ByChunks
+            sender::SendStrategy::ByChunks,
         );
         packet.send(&app);
     });
