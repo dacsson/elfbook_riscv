@@ -1,8 +1,6 @@
 mod sender;
 mod spec_parser;
-mod state;
 
-use crate::state::{AppMutex, AppState};
 use std::process::Command;
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager};
@@ -90,10 +88,6 @@ fn read_spec(app: AppHandle, query: String) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .setup(|app| {
-            app.manage(AppMutex(Mutex::new(AppState::new())));
-            Ok(())
-        })
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![

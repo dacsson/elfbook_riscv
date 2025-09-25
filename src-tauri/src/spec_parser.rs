@@ -62,7 +62,12 @@ pub fn find_in_html(file_path: &str, query: &str) -> Result<Vec<String>, PdfErro
         Ok(mut t) => t.read_to_string(&mut text),
         Err(_) => return Err(PdfError::NotFound),
     };
-    let lines: Vec<&str> = text.split("<h4").collect();
+
+    // Cut unnecessary parts of the HTML content
+    let introduction = text.find("<h2 id=\"_introduction\">1. Introduction</h2>").unwrap();
+    text = text[introduction..].to_string();
+
+    let lines: Vec<&str> = text.split("<div class=\"sect3\">").collect();
 
     let res: Vec<String> = lines
         .into_par_iter()
@@ -70,21 +75,12 @@ pub fn find_in_html(file_path: &str, query: &str) -> Result<Vec<String>, PdfErro
             let text_lower = page.to_lowercase();
             let query_lower = query.to_lowercase();
             if text_lower.contains(&query_lower) {
-                let res = "<h4".to_string() + page;
-                // let text_lower = page.to_lowercase();
-                // let index = text_lower.find(&query_lower).unwrap();
-                // let nearest_header = text_lower[..index].rfind("<h4").unwrap();
-                // let header_end_index = text_lower[nearest_header..].find("</h4>").unwrap();
-                // let page = &text_lower[nearest_header..header_end_index];
-                Some(res)
-                // Some(line.to_string())
+                Some(page.to_string())
             } else {
                 None
             }
         })
         .collect();
-
-    println!("res {:?}", res);
 
     Ok(res)
 }
