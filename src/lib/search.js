@@ -18,12 +18,10 @@ export class SearchManager {
         this.clearHighlights();
 
         // Search in all lines (not just visible ones)
-        // We need to search through all the stored lines, not the DOM elements
         this.searchResults = [];
 
         // Search through all stored lines
         scrollManager.lines.forEach((lineHtml, index) => {
-            // Extract text content from the HTML to search
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = lineHtml;
             const text = tempDiv.textContent || tempDiv.innerText || '';

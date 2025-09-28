@@ -54,6 +54,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     searchAccept.addEventListener('click', async () => {
         searchManager.onAcceptClick(disasmScrollManager)
+        const specContainer = document.getElementById('specContainer');
+        specContainer.innerHTML = '';
         invoke("read_spec", {query: searchInput.value})
     })
 
@@ -79,7 +81,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const tabId = tab.getAttribute('data-tab');
             disasmContent.style.display = tabId === 'disasm' ? 'block' : 'none';
             readelfContent.style.display = tabId === 'readelf' ? 'block' : 'none';
-            // hexContainer.style.display = tabId === 'hexdump' ? 'block' : 'none';
         });
     });
 

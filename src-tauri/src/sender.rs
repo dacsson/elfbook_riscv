@@ -2,16 +2,15 @@
 //! utilities
 
 use tauri::{AppHandle, Emitter};
-use tauri::ipc::Channel;
 
 /// Event kinds that frontend
 /// can accept
 pub enum Event {
-    Disassembled, // result of llvm-objdump
-    HexDumped, // result of xxd
+    Disassembled,  // result of llvm-objdump
+    HexDumped,     // result of xxd
     ElfInfoDumped, // result of readelf
-    SpecResult, // result of RISC-V spec finder
-    Error
+    SpecResult,    // result of RISC-V spec finder
+    Error,
 }
 
 impl Event {
@@ -28,7 +27,7 @@ impl Event {
 
 pub enum SendStrategy {
     General, // just send data as a whole
-    ByChunks
+    ByChunks,
 }
 
 pub struct Packet<T> {
