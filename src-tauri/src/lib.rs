@@ -1,6 +1,9 @@
 mod sender;
 mod spec_parser;
+mod state;
+mod settings;
 
+use crate::state::{AppMutex, AppState};
 use std::process::Command;
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager};
@@ -70,26 +73,53 @@ fn readelf_file(app: AppHandle, file_path: &str) {
 #[tauri::command]
 fn read_spec(app: AppHandle, query: String) {
     tauri::async_runtime::spawn(async move {
+        let state = app.state::<AppMutex>();
+        let mut state = state.0.lock().unwrap();
+        let riscv_isa_path = state.get_settings().get_path_to_isa();
         let text = spec_parser::find_in_html(
-            "/home/safonoff/Work/riscv-isa-manual/build/riscv-unprivileged.html",
+            &riscv_isa_path.join("build/riscv-unprivileged.html"),
             &query,
         );
-        // spec_parser::find_in_doc("/home/safonoff/Documents/riscv_spec.txt", &query);
 
-        let packet = sender::Packet::new(
-            sender::Event::SpecResult,
-            String::from(text.unwrap().join("\n")),
-            sender::SendStrategy::ByChunks,
-        );
-        packet.send(&app);
+        match text {
+            Ok(r) => {
+                let packet = sender::Packet::new(
+                    sender::Event::SpecResult,
+                    String::from(r.join("\n")),
+                    sender::SendStrategy::ByChunks,
+                );
+                packet.send(&app);
+            }
+            Err(e) => {
+                // Send error to frontend
+                let packet = sender::Packet::new(
+                    sender::Event::Error,
+                    format!("{}", e),
+                    sender::SendStrategy::General,
+                );
+                packet.send(&app);
+            }
+        };
+
+
     });
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .setup(|app| {
+            let dir = app.path().app_data_dir().map_err(|_| "Failed to get app data dir")?;
+            println!("Dir: {:?}", dir);
+            app.manage(AppMutex(Mutex::new(AppState::new(dir))));
+            let state = app.state::<AppMutex>();
+            let mut state = state.0.lock().unwrap();
+            state.check_settings();
+            Ok(())
+        })
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![
             disassemble_file,
             hexdump_file,
